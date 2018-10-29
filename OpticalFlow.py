@@ -38,8 +38,8 @@ class OpticalFlow(object):
     # - path for saving the 4D hsv image array (optical flow)
     def step(self, rgb_vid_in_p=None, rgb_4d_out_p=None, flow_4d_out_p=None):
         print("process video from %s" % rgb_vid_in_p)
-        # rgb_4d = self.vidToImgs(rgb_vid_path=None)
-        # flow_4d = self.batchOpticalFlow(rgb_4d=None)
+        # rgb_4d = self.vid_to_imgs(rgb_vid_path=None)
+        # flow_4d = self.batch_optical_flow(rgb_4d=None)
         # Save rgb_4d to path rgb_4d_out_p
         print("save raw rgb images to %s" % rgb_4d_out_p)
         # Save flow_4d to path flow_4d_out_p
