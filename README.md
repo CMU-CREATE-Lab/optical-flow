@@ -5,7 +5,7 @@ A tool for computing optical flow from video clips.
 1. Install conda from https://conda.io/docs/user-guide/getting-started.html
 2. Clone this repository
 ```sh
-sudo git clone https://github.com/yenchiah/video-labeling-tool.git
+sudo git clone https://github.com/CMU-CREATE-Lab/optical-flow.git
 sudo chmod 777 optical-flow/
 ```
 3. Create and activate conda environment
