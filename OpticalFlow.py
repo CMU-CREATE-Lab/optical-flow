@@ -1,35 +1,68 @@
-import cv2
+import cv2 as cv
 import numpy as np
 
+
 class OpticalFlow(object):
-    
     # Use this function to initialize parameters 
     def __init__(self):
-        # self.your_variable = []
         print("constructor")
-        pass # remove this line after you code
+        pass
 
     # Compute optical flow images from a batch of rgb images
     # Read rgb images and save the output hsv optical flow images to disk
-    # For the output hsv image, optical direction and length are coded by hue and saturation respectively
-    # Input: a 4D raw image array in rgb color (width, height, rgb channel, time)
-    # Ouput: a 4D optical flow image array in hsv color (width, height, hsv channel, time)
+    # For the output hsv image, optical direction and length are coded by hue
+    # and saturation respectively Input: a 4D raw image array in rgb color
+    # (rgb channel, time (in frames), height, width)
+    # Output: a 4D optical flow image array in hsv color (hsv channel, time
+    # (in frames), height, width)
     # IMPORTANT: you need to handle edge cases, such as only one input images
     def batch_optical_flow(self, rgb_4d=None):
-        # Process rgb_imgs into optical flow images
-        # Return optical flow images
+        length, height, width = rgb_4d.shape[0], rgb_4d.shape[1], rgb_4d.shape[2]
+        fin_hsv_array = np.zeros((length, height, width, 2))
+        rgb_4d = rgb_4d.astype(int)
+        rgb_4d = np.uint8(rgb_4d)
+        previous_frame = rgb_4d[0, :, :, :]
+        previous_gray = cv.cvtColor(previous_frame, cv.COLOR_RGB2GRAY)
+        hsv = np.zeros_like(previous_frame)
+        hsv[..., 1] = 255
+        count = 0
+        for i in rgb_4d:
+            current_frame = i
+            current_gray = cv.cvtColor(current_frame, cv.COLOR_BGR2GRAY)
+            flow = cv.calcOpticalFlowFarneback(previous_gray, current_gray, None, 0.5, 3, 15, 3, 5, 1.2, 2)
+            magnitude, angle = cv.cartToPolar(flow[..., 0], flow[..., 1])
+            hsv[..., 0] = angle * 180 / np.pi / 2
+            hsv[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
+            fin_hsv_array[count, :, :, :] = hsv[:, :, [0, 2]]
+            previous_frame = current_frame
+            count += 1
         print("batch optical flow")
-        pass # remove this line after you code
-    
+        return fin_hsv_array
+
     # Process an encoded video (h.264 mp4 format) into a 4D rgb image array
     # Input: path to a video clip
-    # Output: a 4D image array in rgb color (width, height, rgb channel, time)
+    # Output: a 4D image array in rgb color (rgb channel, time (in frames),
+    # height, width)
     def vid_to_imgs(self, rgb_vid_path=None):
-        # Read the video from rgb_vid_path
-        # Process the video into a 4D rgb image aray
-        # Return the 4D rgb image array
+        capture = cv.VideoCapture(rgb_vid_path)
+        ret, previous_frame = capture.read()
+
+        height = np.size(previous_frame, 0)
+        width = np.size(previous_frame, 1)
+        length = int(capture.get(cv.CAP_PROP_FRAME_COUNT))
+        fin_rgb_array = np.zeros((length-1, height, width, 3))
+
+        if length <= 1:
+            return None
+
+        for i in range(fin_rgb_array.shape[0]):
+            ret, current_frame = capture.read()
+            fin_rgb_array[i, :, :, :] = current_frame
+
+            previous_frame = current_frame
+        capture.release()
         print("video to images")
-        pass # remove this line after you code
+        return fin_rgb_array
 
     # Read a video clip and save processed image arrays to disk
     # Input:
@@ -38,10 +71,26 @@ class OpticalFlow(object):
     # - path for saving the 4D hsv image array (optical flow)
     def step(self, rgb_vid_in_p=None, rgb_4d_out_p=None, flow_4d_out_p=None):
         print("process video from %s" % rgb_vid_in_p)
-        # rgb_4d = self.vid_to_imgs(rgb_vid_path=None)
-        # flow_4d = self.batch_optical_flow(rgb_4d=None)
+        rgb_4d = self.vid_to_imgs(rgb_vid_in_p)
+        if rgb_4d == None:
+            return None
+
+        flow_4d = self.batch_optical_flow(rgb_4d)
+
+        # Reshape rgb_4d to a pytorch readable format:
+        # (Channel, time in frames, height, width)
+        rgb_4d = rgb_4d.swapaxes(0, 3)
+        rgb_4d = rgb_4d.swapaxes(1, 3)
+        rgb_4d = rgb_4d.swapaxes(2, 3)
+
+        # Reshape flow_4d to a pytorch readable format:
+        # (Channel, time in frames, height, width)
+        flow_4d = flow_4d.swapaxes(0, 3)
+        flow_4d = flow_4d.swapaxes(1, 3)
+        flow_4d = flow_4d.swapaxes(2, 3)
         # Save rgb_4d to path rgb_4d_out_p
         print("save raw rgb images to %s" % rgb_4d_out_p)
+        np.save(rgb_4d_out_p, rgb_4d)
         # Save flow_4d to path flow_4d_out_p
         print("save flow hsv images to %s" % flow_4d_out_p)
-        pass # remove this line after you code
+        np.save(flow_4d_out_p, flow_4d)
