@@ -1,7 +1,6 @@
 import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
-np.set_printoptions(threshold=np.nan)
 
 class OpticalFlow(object):
     # Use this function to initialize parameters 
