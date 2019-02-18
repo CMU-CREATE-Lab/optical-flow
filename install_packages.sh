@@ -1,5 +1,9 @@
-# For Mac and Linux
-while read requirement; do conda install --yes $requirement; done < requirements.txt
+#!/bin/sh
 
-# For Windows
-#FOR /F "delims=~" %f in (requirements.txt) DO conda install --yes "%f" || pip install "%f"
+# Optical Flow
+pip install opencv-python==3.4.3
+pip install numpy==1.14.3
+pip install matplotlib==2.2.3
+
+# Testing Optical Flow
+pip install requests==2.18.4
