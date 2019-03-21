@@ -1,6 +1,7 @@
 from OpticalFlow import *
 import requests
 import json
+import os
 
 def main():
     frame_thresh_values = {}
@@ -24,7 +25,10 @@ def main():
                     memo_dict[i['id']] = memo_dict.get(i['id'], False)
                     if memo_dict[i['id']]: filtered += 1
                     if not memo_dict[i['id']]:
-                        test.step(i["url_root"] + i["url_part"])
+                        # test.step(i["url_root"] + i["url_part"])
+                        url_concat = i["url_root"] + i["url_part"]
+                        os.system("curl -o tmp.mp4 '%s'" % url_concat)
+                        test.step('tmp.mp4')
                         if not test.threshold(pixel, frame, 0.3):
                             filtered += 1
                             memo_dict[i['id']] = True
