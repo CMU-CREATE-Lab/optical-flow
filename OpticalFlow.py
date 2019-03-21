@@ -35,9 +35,12 @@ class OpticalFlow(object):
             current_gray = cv.cvtColor(current_frame, cv.COLOR_BGR2GRAY)
             flow = cv.calcOpticalFlowFarneback(previous_gray, current_gray, None, 0.5, 3, 15, 3, 5, 1.2, 2)
             magnitude, angle = cv.cartToPolar(flow[..., 0], flow[..., 1])
+            # channel 0 represents direction
             self.hsv[..., 0] = angle * 180 / np.pi / 2
-            self.hsv[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
-
+            # channel 2 represents magnitude
+            self.hsv[..., 2] = np.minimum(magnitude*5, 255)
+            # print(self.hsv[..., 2])
+            # self.hsv[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
 
             if not save_path == None:
                 cv.imwrite(save_path + 'hsvframe%d.jpg' % count, self.hsv)
@@ -120,6 +123,7 @@ class OpticalFlow(object):
         # print(np.shape(self.thresh_4d[frame, :, :, 1])) TODO
         for i in self.fin_hsv_array:
             self.thresh_4d[frame,:,:,:] = np.copy(i[:, :, :])
+            # print(self.thresh_4d[frame, :, :, 1])
             bin_img = 1.0 * (self.thresh_4d[frame,:,:,1] > pixel_threshold)
             bin_img_shape = np.shape(bin_img)
             s.append(np.sum(bin_img[:]) / (bin_img_shape[0] * bin_img_shape[1]))
