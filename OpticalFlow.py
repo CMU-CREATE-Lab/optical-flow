@@ -38,10 +38,8 @@ class OpticalFlow(object):
             # channel 0 represents direction
             self.hsv[..., 0] = angle * 180 / np.pi / 2
             # channel 2 represents magnitude
-            self.hsv[..., 2] = np.minimum(magnitude*5, 255)
-            # print(self.hsv[..., 2])
-            # self.hsv[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
-
+            self.hsv[..., 2] = magnitude*100
+            # self.hsv[..., 2] = np.minimum(magnitude*5, 255)
             if not save_path == None:
                 cv.imwrite(save_path + 'hsvframe%d.jpg' % count, self.hsv)
             self.fin_hsv_array[count, :, :, :] = self.hsv[:, :, [0, 2]]
@@ -149,7 +147,7 @@ class OpticalFlow(object):
     def show_flow(self):
         for i in range(np.shape(self.rgb_4d)[0]):
             plt.subplot(131), plt.imshow(self.thresh_4d[i,:,:,1]), plt.title('thresh')
-            plt.subplot(132), plt.imshow(self.fin_hsv_array[i,:,:,1]), plt.title('hsv')
+            plt.subplot(132), plt.imshow(self.fin_hsv_array[i,:,:,1].astype(np.uint8)), plt.title('hsv')
             plt.subplot(133), plt.imshow(self.rgb_4d[i, ...].astype(np.uint8)), plt.title('rgb')
             plt.figure()
             plt.draw()
