@@ -4,16 +4,16 @@ import json
 import os
 
 def main():
+    end_dict = {}
     frame_thresh_values = {}
     pixel_thresh_values = {}
     test = OpticalFlow()
-    pixel_values_array = [20, 22, 24, 26, 28, 30]
+    pixel_values_array = [80, 90, 100, 110, 120, 130, 140, 150]
     frame_values_array = [0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
     for page in ['1', '2', '3', '4']:
         url = 'http://api.smoke.createlab.org/api/v1/get_neg_labels_by_researcher'
 
         params = {'pageSize': '1000', 'pageNumber':page}
-
         response = requests.get(url=url, params=params)
         videos = json.loads(response.text)
         for pixel in pixel_values_array:
@@ -34,11 +34,13 @@ def main():
                             memo_dict[i['id']] = True
                     total += 1
                     print("  " + str(i['id']))
-                frame_thresh_values[frame] = (filtered, total, filtered / total * 100)
+                frame_thresh_values[frame] = [filtered, total, filtered / total * 100]
                 print(frame, filtered / total * 100)
             pixel_thresh_values[pixel] = frame_thresh_values
             frame_thresh_values = {}
         print(pixel_thresh_values)
+        end_dict[page] = pixel_thresh_values
+    return end_dict
 
 
 print(main())
