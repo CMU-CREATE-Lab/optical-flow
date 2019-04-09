@@ -8,6 +8,7 @@ class OpticalFlow(object):
         self.fin_hsv_array = None
         self.thresh_4d = None
         self.rgb_4d = None
+        self.rgb_filtered = None
         self.flow_4d = None
         # print("constructor") TODO
         pass
@@ -89,6 +90,7 @@ class OpticalFlow(object):
             return None
         rgb_4d = self.vid_to_imgs(rgb_vid_in_p)
         self.rgb_4d = np.copy(rgb_4d)
+        self.rgb_filtered = np.copy(self.rgb_4d)
 
         flow_4d = self.batch_optical_flow(rgb_4d, save_path)
 
@@ -123,13 +125,31 @@ class OpticalFlow(object):
             self.thresh_4d[frame,:,:,:] = np.copy(i[:, :, :])
             # print(self.thresh_4d[frame, :, :, 1])
             bin_img = 1.0 * (self.thresh_4d[frame,:,:,1] > pixel_threshold)
+            rgb = self.rgb_filtered[frame, :, :, :]
+            hsv = np.copy(rgb).astype(np.uint8)
+            hsv = cv.cvtColor(hsv, cv.COLOR_RGB2HSV)
+            saturation = hsv[:, :, 1]
+            print(saturation)
+            saturation = 1.0 * np.where(saturation < 100, 0, saturation)
+            saturation = 1.0 * np.where(bin_img == 0, 0, saturation)
+            zeros = np.zeros_like(saturation)
+
+            bin_img = np.where(saturation == 0, 0, bin_img)
             bin_img_shape = np.shape(bin_img)
             s.append(np.sum(bin_img[:]) / (bin_img_shape[0] * bin_img_shape[1]))
             self.thresh_4d[frame, :, :, 1] = bin_img
+
+            # rgb_filtered[:, :, 0] = rgb_bin
+            # rgb_filtered[:, :, 1] = rgb_bin
+            # rgb_filtered[:, :, 2] = rgb_bin
+            self.rgb_filtered[frame, :, :, 0] = zeros
+            self.rgb_filtered[frame, :, :, 1] = saturation
+            self.rgb_filtered[frame, :, :, 2] = zeros
             frame += 1
         if desired_frames < 1:
             s.sort()
             sub_s = s[-num_frames:]
+            print(sub_s)
             for i in sub_s:
                 # print(i) TODO
                 if i > frame_threshold:
@@ -146,9 +166,10 @@ class OpticalFlow(object):
 
     def show_flow(self):
         for i in range(np.shape(self.rgb_4d)[0]):
-            plt.subplot(131), plt.imshow(self.thresh_4d[i,:,:,1]), plt.title('thresh')
-            plt.subplot(132), plt.imshow(self.fin_hsv_array[i,:,:,1].astype(np.uint8)), plt.title('hsv')
-            plt.subplot(133), plt.imshow(self.rgb_4d[i, ...].astype(np.uint8)), plt.title('rgb')
+            plt.subplot(141), plt.imshow(self.thresh_4d[i,:,:,1]), plt.title('thresh')
+            plt.subplot(142), plt.imshow(self.fin_hsv_array[i,:,:,1].astype(np.uint8)), plt.title('hsv')
+            plt.subplot(143), plt.imshow(self.rgb_4d[i, ...].astype(np.uint8)), plt.title('rgb')
+            plt.subplot(144), plt.imshow(self.rgb_filtered[i, ...].astype(np.uint8)), plt.title('filt')
             plt.figure()
             plt.draw()
             plt.pause(0.001)
