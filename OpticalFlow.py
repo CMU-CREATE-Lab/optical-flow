@@ -3,13 +3,34 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 class OpticalFlow(object):
-    # Use this function to initialize parameters 
-    def __init__(self):
+    # Use this function to initialize parameters
+    # Input:
+    #   - input path of rgb video
+    #   - output filename of the 4d rgb array
+    #   - output filename of the 4d optical flow array
+    #   - output file path of the arrays (eg Documents/arrays)
+    #   - pixel threshold for optical flow array
+    #   - pixel threshold for saturation
+    #   - percentage of frame thresholded for acceptable smoke candidacy
+    #   - method for computing optical flow (1 = Farneback method, 2 = TVL1 method)
+    #   - number of frames to check when thresholding
+    def __init__(self, rgb_vid_in_p=None, rgb_4d_out_p=None, flow_4d_out_p=None,
+                 save_file_path=None, flow_threshold=255, sat_threshold=255,
+                 frame_threshold=1, flow_type=1, desired_frames=1):
+        self.rgb_vid_in_p = rgb_vid_in_p
+        self.rgb_4d_out_p = rgb_4d_out_p
+        self.flow_4d_out_p = flow_4d_out_p
+        self.save_file_path = save_file_path
+        self.flow_threshold = flow_threshold
+        self.sat_threshold = sat_threshold
+        self.frame_threshold = frame_threshold
+        self.flow_type = flow_type
         self.fin_hsv_array = None
         self.thresh_4d = None
         self.rgb_4d = None
         self.rgb_filtered = None
         self.flow_4d = None
+        self.desired_frames = desired_frames
         # print("constructor") TODO
         pass
 
@@ -34,7 +55,11 @@ class OpticalFlow(object):
         for i in rgb_4d:
             current_frame = i
             current_gray = cv.cvtColor(current_frame, cv.COLOR_BGR2GRAY)
-            flow = cv.calcOpticalFlowFarneback(previous_gray, current_gray, None, 0.5, 3, 15, 3, 5, 1.2, 2)
+            if self.flow_type == 1:
+                flow = cv.calcOpticalFlowFarneback(previous_gray, current_gray, None, 0.5, 3, 15, 3, 5, 1.2, 2)
+            elif self.flow_type == 2:
+                optical_flow = cv.DualTVL1OpticalFlow_create()
+                flow = optical_flow.calc(previous_gray, current_gray, None)
             magnitude, angle = cv.cartToPolar(flow[..., 0], flow[..., 1])
             # channel 0 represents direction
             self.hsv[..., 0] = angle * 180 / np.pi / 2
@@ -72,8 +97,6 @@ class OpticalFlow(object):
         for i in range(fin_rgb_array.shape[0]):
             ret, current_frame = capture.read()
             fin_rgb_array[i, :, :, :] = cv.cvtColor(current_frame, cv.COLOR_BGR2RGB)
-
-
             previous_frame = current_frame
         capture.release()
         # print("video to images") TODO
@@ -86,9 +109,9 @@ class OpticalFlow(object):
     # - path for saving the 4D hsv image array (optical flow)
     def step(self, rgb_vid_in_p=None, rgb_4d_out_p=None, flow_4d_out_p=None, save_path=None):
         # print("process video from %s" % rgb_vid_in_p) TODO
-        if rgb_vid_in_p == None:
+        if self.rgb_vid_in_p == None:
             return None
-        rgb_4d = self.vid_to_imgs(rgb_vid_in_p)
+        rgb_4d = self.vid_to_imgs(self.rgb_vid_in_p)
         self.rgb_4d = np.copy(rgb_4d)
         self.rgb_filtered = np.copy(self.rgb_4d)
 
@@ -112,43 +135,21 @@ class OpticalFlow(object):
         # print("save flow hsv images to %s" % flow_4d_out_p) TODO
         # np.save(flow_4d_out_p, flow_4d)
 
-    def threshold(self, pixel_threshold, frame_threshold, desired_frames):
+    def threshold(self, pixel_threshold, saturation_threshold, frame_threshold, desired_frames):
         # print("determining video threshold") TODO
         if type(self.fin_hsv_array) != np.ndarray:
             return None
         num_frames = int(np.shape(self.fin_hsv_array)[0]*desired_frames)
-        s = []
+        acceptable_per_frame = []
         self.thresh_4d = np.copy(self.fin_hsv_array)
         frame = 0
-        # print(np.shape(self.thresh_4d[frame, :, :, 1])) TODO
-        for i in self.fin_hsv_array:
-            self.thresh_4d[frame,:,:,:] = np.copy(i[:, :, :])
-            # print(self.thresh_4d[frame, :, :, 1])
-            bin_img = 1.0 * (self.thresh_4d[frame,:,:,1] > pixel_threshold)
-            rgb = self.rgb_filtered[frame, :, :, :]
-            hsv = np.copy(rgb).astype(np.uint8)
-            hsv = cv.cvtColor(hsv, cv.COLOR_RGB2HSV)
-            saturation = hsv[:, :, 1]
-            print(saturation)
-            saturation = 1.0 * np.where(saturation < 100, 0, saturation)
-            saturation = 1.0 * np.where(bin_img == 0, 0, saturation)
-            zeros = np.zeros_like(saturation)
-
-            bin_img = np.where(saturation == 0, 0, bin_img)
-            bin_img_shape = np.shape(bin_img)
-            s.append(np.sum(bin_img[:]) / (bin_img_shape[0] * bin_img_shape[1]))
-            self.thresh_4d[frame, :, :, 1] = bin_img
-
-            # rgb_filtered[:, :, 0] = rgb_bin
-            # rgb_filtered[:, :, 1] = rgb_bin
-            # rgb_filtered[:, :, 2] = rgb_bin
-            self.rgb_filtered[frame, :, :, 0] = zeros
-            self.rgb_filtered[frame, :, :, 1] = saturation
-            self.rgb_filtered[frame, :, :, 2] = zeros
+        for hsv in self.fin_hsv_array:
+            bin_img = self.optical_flow_threshold(pixel_threshold, frame, hsv)
+            self.saturation_threshold(saturation_threshold, acceptable_per_frame, frame, bin_img)
             frame += 1
         if desired_frames < 1:
-            s.sort()
-            sub_s = s[-num_frames:]
+            acceptable_per_frame.sort()
+            sub_s = acceptable_per_frame[-num_frames:]
             print(sub_s)
             for i in sub_s:
                 # print(i) TODO
@@ -157,12 +158,43 @@ class OpticalFlow(object):
                     return True
             print("no smoke detected")
             return False
-        for i in s:
+        for i in acceptable_per_frame:
             if i > frame_threshold:
                 # print("acceptable") TODO
                 return True
         # print("no smoke detected") TODO
         return False
+
+    def optical_flow_threshold(self, pixel_threshold, frame, hsv):
+        self.thresh_4d[frame,:,:,:] = np.copy(hsv[:, :, :])
+        # print(self.thresh_4d[frame, :, :, 1])
+        bin_img = 1.0 * (self.thresh_4d[frame,:,:,1] > pixel_threshold)
+        return bin_img
+
+    def saturation_threshold(self, saturation_threshold, acceptable_per_frame, frame, bin_img):
+        rgb = self.rgb_filtered[frame, :, :, :]
+        hsv = np.copy(rgb).astype(np.uint8)
+        hsv = cv.cvtColor(hsv, cv.COLOR_RGB2HSV)
+        saturation = hsv[:, :, 1]
+        saturation = 1.0 * np.where(saturation < saturation_threshold, 0, saturation)
+        saturation = 1.0 * np.where(bin_img == 0, 0, saturation)
+        zeros = np.zeros_like(saturation)
+
+        bin_img = np.where(saturation == 0, 0, bin_img)
+
+        bin_img_shape = np.shape(bin_img)
+        acceptable_per_frame.append(np.sum(bin_img[:]) / (bin_img_shape[0] * bin_img_shape[1]))
+        self.thresh_4d[frame, :, :, 1] = bin_img
+
+        self.rgb_filtered[frame, :, :, 0] = zeros
+        self.rgb_filtered[frame, :, :, 1] = saturation
+        self.rgb_filtered[frame, :, :, 2] = zeros
+
+    def compute_optical_flow(self):
+        self.step(self.rgb_vid_in_p, self.rgb_4d_out_p, self.flow_4d_out_p, self.save_file_path)
+
+    def contains_smoke(self):
+        return self.threshold(self.flow_threshold, self.sat_threshold, self.frame_threshold, self.desired_frames)
 
     def show_flow(self):
         for i in range(np.shape(self.rgb_4d)[0]):
