@@ -20,8 +20,6 @@ def main():
     sat_thresh = 90
 
     test = OpticalFlow()
-    pixel_values_array = [80, 90, 100, 110, 120, 130, 140, 150]
-    frame_values_array = [0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
     with open('video_labels.json') as f:
         videos = json.load(f)
 
@@ -33,7 +31,7 @@ def main():
         test = OpticalFlow(rgb_vid_in_p = 'tmp.mp4', flow_threshold=flow_thresh,
                            sat_threshold=sat_thresh, frame_threshold=0.01)
         test.compute_optical_flow()
-        has_smoke = test.contains_smoke
+        has_smoke = test.contains_smoke()
         if i["label_state_admin"] == 47:
             num_pos_gold_total += 1
             if has_smoke:
