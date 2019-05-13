@@ -39,8 +39,8 @@ class OpticalFlow(object):
     # For the output hsv image, optical direction and length are coded by hue
     # and saturation respectively Input: a 4D raw image array in rgb color
     # (rgb channel, time (in frames), height, width)
-    # Output: a 4D optical flow image array in hsv color (hsv channel, time
-    # (in frames), height, width)
+    # Output: a 4D optical flow image array in hsv color (time
+    # (in frames), height, width, hsv channel (only hue and value channels))
     # IMPORTANT: you need to handle edge cases, such as only one input images
     def batch_optical_flow(self, rgb_4d=None, save_path=None):
         length, height, width = rgb_4d.shape[0], rgb_4d.shape[1], rgb_4d.shape[2]
@@ -80,8 +80,8 @@ class OpticalFlow(object):
 
     # Process an encoded video (h.264 mp4 format) into a 4D rgb image array
     # Input: path to a video clip
-    # Output: a 4D image array in rgb color (rgb channel, time (in frames),
-    # height, width)
+    # Output: a 4D image array in rgb color (time (in frames),
+    # height, width, rgb channel)
     def vid_to_imgs(self, rgb_vid_path=None):
         capture = cv.VideoCapture(rgb_vid_path)
         ret, previous_frame = capture.read()
@@ -89,14 +89,14 @@ class OpticalFlow(object):
         height = np.size(previous_frame, 0)
         width = np.size(previous_frame, 1)
         length = int(capture.get(cv.CAP_PROP_FRAME_COUNT))
-        fin_rgb_array = np.zeros((length-1, height, width, 3))
+        fin_rgb_array = np.zeros((length, height, width, 3))
 
         if length <= 1:
             return None
 
-        for i in range(fin_rgb_array.shape[0]):
+        for i in range(length):
+            fin_rgb_array[i, :, :, :] = cv.cvtColor(previous_frame, cv.COLOR_BGR2RGB)
             ret, current_frame = capture.read()
-            fin_rgb_array[i, :, :, :] = cv.cvtColor(current_frame, cv.COLOR_BGR2RGB)
             previous_frame = current_frame
         capture.release()
         # print("video to images") TODO
