@@ -12,8 +12,8 @@ class OpticalFlow(object):
     #   flow_threshold (int): pixel threshold for optical flow array (range 0 to 255)
     #   sat_threshold (int): pixel threshold for saturation (range 0 to 255)
     #   frame_threshold (float): percentage of frame thresholded for acceptable smoke candidacy (range 0 to 1):
-    #       e.g. if a frame is thresholded and 2% of the pixels are left on (set to 1) that
-    #       would be a frame percentage of .02
+    #       e.g. if a frame is thresholdeded and 2% of the pixels are left on (set to 1) that
+    #       would be a frame percentage of 0.02
     #   flow_type (int; 1 or 2): method for computing optical flow (1 = Farneback method, 2 = TVL1 method)
     #   desired_frames (float): percentage of frames to check when thresholding (range 0 to 1)
     #       e.g. if set to .3 checks the 30% of the frames that have the highest
