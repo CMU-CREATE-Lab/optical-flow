@@ -35,7 +35,7 @@ class OpticalFlow(object):
         self.rgb_filtered = None
         self.flow_4d = None
         self.desired_frames = desired_frames
-        # print("constructor") TODO
+        # print("constructor")
         pass
 
     # Compute optical flow images from a batch of rgb images
@@ -50,7 +50,6 @@ class OpticalFlow(object):
     #   dimensions: (time (in frames), height, width, hsv channel (only hue and saturation channels))
     # IMPORTANT: you need to handle edge cases, such as only one input images
     def batch_optical_flow(self, rgb_4d=None, save_path=None):
-        print(np.shape(rgb_4d))
         length, height, width = rgb_4d.shape[0], rgb_4d.shape[1], rgb_4d.shape[2]
         self.fin_hsv_array = np.zeros((length, height, width, 2))
         rgb_4d = rgb_4d.astype(int)
@@ -82,7 +81,7 @@ class OpticalFlow(object):
             count += 1
         cv.destroyAllWindows()
 
-        # print("batch optical flow") TODO
+        # print("batch optical flow")
         return self.fin_hsv_array
 
     # Process an encoded video (h.264 mp4 format) into a 4D rgb image array
@@ -107,7 +106,7 @@ class OpticalFlow(object):
             ret, current_frame = capture.read()
             previous_frame = current_frame
         capture.release()
-        # print("video to images") TODO
+        # print("video to images")
         return fin_rgb_array
 
     # Read a video clip and save processed image arrays to disk
@@ -120,7 +119,7 @@ class OpticalFlow(object):
     #   4d RGB array in pytorch readable format (tensor)
     #   4d HSV array in pytorch readable format (tensor)
     def step(self, rgb_vid_in_p=None, rgb_4d_out_p=None, flow_4d_out_p=None, save_path=None):
-        # print("process video from %s" % rgb_vid_in_p) TODO
+        # print("process video from %s" % rgb_vid_in_p)
         if self.rgb_vid_in_p == None:
             return None
         rgb_4d = self.vid_to_imgs(self.rgb_vid_in_p)
@@ -167,7 +166,7 @@ class OpticalFlow(object):
     # Output:
     #   Boolean (True --> significant smoke movement; False --> no significant smoke movement)
     def threshold(self, flow_threshold, saturation_threshold, frame_threshold, desired_frames):
-        # print("determining video threshold") TODO
+        # print("determining video threshold")
         if type(self.fin_hsv_array) != np.ndarray:
             return None
         num_frames = int(np.shape(self.fin_hsv_array)[0]*desired_frames)
@@ -190,9 +189,9 @@ class OpticalFlow(object):
             return False
         for i in acceptable_per_frame:
             if i > frame_threshold:
-                # print("acceptable") TODO
+                # print("acceptable")
                 return True
-        # print("no smoke detected") TODO
+        # print("no smoke detected")
         return False
 
     # Thresholds whether or not optical flow frame pixels are above threshold
