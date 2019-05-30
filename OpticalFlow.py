@@ -36,7 +36,6 @@ class OpticalFlow(object):
         self.flow_4d = None
         self.desired_frames = desired_frames
         # print("constructor")
-        pass
 
     # Compute optical flow images from a batch of rgb images
     # Read rgb images and save the output hsv optical flow images to disk
