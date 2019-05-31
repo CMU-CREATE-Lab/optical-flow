@@ -63,7 +63,4 @@ def main():
     results["Negative Gold Retention Percent"] = (num_neg_not_gold_kept/num_neg_not_gold_total)*100
     return(results)
 
-
 print(main())
-
-
