@@ -20,7 +20,7 @@ class OpticalFlow(object):
     #       frame percentage for being higher than the frame_threshold value
     def __init__(self, rgb_vid_in_p=None, rgb_4d_out_p=None, flow_4d_out_p=None,
                  save_file_path=None, flow_threshold=255, sat_threshold=255,
-                 frame_threshold=1, flow_type=2, desired_frames=1):
+                 frame_threshold=1, flow_type=1, desired_frames=1):
         self.rgb_vid_in_p = rgb_vid_in_p
         self.rgb_4d_out_p = rgb_4d_out_p
         self.flow_4d_out_p = flow_4d_out_p
