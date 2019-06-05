@@ -64,7 +64,7 @@ class OpticalFlow(object):
             if self.flow_type == 1:
                 flow = cv.calcOpticalFlowFarneback(previous_gray, current_gray, None, 0.5, 3, 15, 3, 5, 1.2, 2)
             elif self.flow_type == 2:
-                optical_flow = cv.DualTVL1OpticalFlow_create()
+                optical_flow = cv.optflow.DualTVL1OpticalFlow_create()
                 flow = optical_flow.calc(previous_gray, current_gray, None)
             magnitude, angle = cv.cartToPolar(flow[..., 0], flow[..., 1])
             # channel 0 represents direction

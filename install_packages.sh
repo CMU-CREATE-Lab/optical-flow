@@ -1,9 +1,10 @@
 #!/bin/sh
 
 # Optical Flow
-pip install opencv-python==4.0.0.21
-pip install numpy==1.16.1
+pip install opencv-python==4.1.0.25
+pip install opencv-contrib-python==4.1.0.25
+pip install numpy==1.16.3
 pip install matplotlib==3.0.2
 
 # Testing Optical Flow
-pip install requests==2.18.4
+pip install requests==2.21.0
