@@ -2,6 +2,8 @@ import os
 import cv2 as cv
 import numpy as np
 import matplotlib
+import ctypes
+from numpy.ctypeslib import ndarray
 #matplotlib.use("TkAgg") # a fix for Mac OS X error
 from matplotlib import pyplot as plt
 
@@ -82,6 +84,16 @@ class OpticalFlow(object):
             elif self.flow_type == 2:
                 optical_flow = cv.optflow.DualTVL1OpticalFlow_create()
                 flow = optical_flow.calc(previous_gray, current_gray, None)
+            elif self.flow_type == 3:
+                optical_flow = ctypes.cdll.LoadLibrary("./CPP_op_flow")
+                flow = np.empty_like(previous_gray)
+                calc_op_flow = optical_flow.calc_cuda_flow
+                calc_op_flow.restype = None
+                calc_op_flow.argtypes = [ctypes.c_int, # Rows
+                                         ctypes.c_int, # Cols
+                                         ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS"), # Previous gray
+                                         ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS"), # Current gray
+                                         ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS")] # Array to be filled
             flow_x = self.clip_and_scale_flow(flow[..., 0])
             flow_y = self.clip_and_scale_flow(flow[..., 1])
             flow_4d[count, :, :, 0] = flow_x
