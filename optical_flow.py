@@ -84,8 +84,8 @@ class OpticalFlow(object):
                 flow = optical_flow.calc(previous_gray, current_gray, None)
             flow_x = self.clip_and_scale_flow(flow[..., 0])
             flow_y = self.clip_and_scale_flow(flow[..., 1])
-            flow_4d[..., 0] = flow_x
-            flow_4d[..., 1] = flow_y
+            flow_4d[count, :, :, 0] = flow_x
+            flow_4d[count, :, :, 1] = flow_y
             if self.record_hsv or self.save_img_dir is not None:
                 magnitude, angle = cv.cartToPolar(flow_x / 255, flow_y / 255, angleInDegrees=True)
                 hsv_img[..., 0] = angle # channel 0 represents direction
