@@ -1,6 +1,8 @@
 import os
 import cv2 as cv
 import numpy as np
+import matplotlib
+#matplotlib.use("PS") # a fix for Mac OS X error
 from matplotlib import pyplot as plt
 
 class OpticalFlow(object):
