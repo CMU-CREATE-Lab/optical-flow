@@ -70,7 +70,8 @@ class OpticalFlow(object):
             # channel 0 represents direction
             self.hsv[..., 0] = angle * 180 / np.pi / 2
             # channel 2 represents magnitude
-            self.hsv[..., 2] = magnitude*100
+            magnitude[magnitude > 30] = 30 # Clip the magnitude to prevent huge values
+            self.hsv[..., 2] = cv.normalize(magnitude, None, 0, 255, cv.NORM_MINMAX)
             if not save_path == None:
                 cv.imwrite(save_path + 'hsvframe%d.jpg' % count, self.hsv)
             self.fin_hsv_array[count, :, :, :] = self.hsv[:, :, [0, 2]]
@@ -129,19 +130,21 @@ class OpticalFlow(object):
 
         # Save rgb_4d to path rgb_4d_out_p
         if rgb_4d_out_p != None:
-            print("save raw rgb images to %s" % rgb_4d_out_p)
+            print("saving raw rgb images to %s" % rgb_4d_out_p)
             if save_path != None:
                 np.save(save_path + rgb_4d_out_p, rgb_4d)
             else: #save_path == None
                 np.save(rgb_4d_out_p, rgb_4d)
+            print("raw rgb images saved to %s" % rgb_4d_out_p)
 
         # Save flow_4d to path flow_4d_out_p
         if flow_4d_out_p != None:
-            print("save flow hsv images to %s" % flow_4d_out_p)
+            print("saving flow hsv images to %s" % flow_4d_out_p)
             if save_path != None:
                 np.save(save_path + flow_4d_out_p, flow_4d)
             else: #save_path == None
                 np.save(flow_4d_out_p, flow_4d)
+            print("raw flow images saved to %s" % flow_4d_out_p)
 
     # Determine whether or not a particular video has significant movement using
     # Optical flow and saturation filtering methods
