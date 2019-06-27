@@ -66,7 +66,6 @@ class OpticalFlow(object):
         length, height, width = rgb_4d.shape[0], rgb_4d.shape[1], rgb_4d.shape[2]
         rgb_4d = np.uint8(rgb_4d) # in the range of 0 to 255
         flow_4d = np.zeros((length, height, width, 2)) # need np.float64
-        #TODO: flow_4d should have one less frame than rgb_4d
         previous_frame = rgb_4d[0, :, :, :]
         previous_gray = cv.cvtColor(previous_frame, cv.COLOR_RGB2GRAY)
         count = 0
@@ -86,9 +85,9 @@ class OpticalFlow(object):
             flow_4d[..., 0] = flow_x
             flow_4d[..., 1] = flow_y
             if self.record_hsv or self.save_img_dir is not None:
-                magnitude, angle = cv.cartToPolar(flow_x, flow_y, angleInDegrees=True)
+                magnitude, angle = cv.cartToPolar(flow_x / 255, flow_y / 255, angleInDegrees=True)
                 hsv_img[..., 0] = angle # channel 0 represents direction
-                hsv_img[..., 2] = magnitude / 255 # channel 2 represents magnitude
+                hsv_img[..., 2] = magnitude # channel 2 represents magnitude
                 self.fin_hsv_array[count, :, :, :] = hsv_img[:, :, [0, 2]]
                 if self.save_img_dir is not None:
                     hsv_img = hsv_img.astype(np.float32)
