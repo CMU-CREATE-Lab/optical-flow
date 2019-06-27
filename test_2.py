@@ -16,8 +16,8 @@ def main():
     num_neg_gold_kept = 0
     num_neg_not_gold_kept = 0
 
-    flow_thresh = 90
-    sat_thresh = 90
+    flow_thresh = 0.35
+    sat_thresh = 0.35
 
     with open("video_labels.json") as f:
         videos = json.load(f)

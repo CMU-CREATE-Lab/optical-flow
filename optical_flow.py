@@ -2,7 +2,7 @@ import os
 import cv2 as cv
 import numpy as np
 import matplotlib
-#matplotlib.use("PS") # a fix for Mac OS X error
+matplotlib.use("TkAgg") # a fix for Mac OS X error
 from matplotlib import pyplot as plt
 
 class OpticalFlow(object):
@@ -72,7 +72,7 @@ class OpticalFlow(object):
         previous_gray = cv.cvtColor(previous_frame, cv.COLOR_RGB2GRAY)
         count = 0
         if self.record_hsv or self.save_img_dir is not None:
-            self.fin_hsv_array = np.zeros((length, height, width, 2)) # need np.float64
+            self.fin_hsv_array = np.zeros((length, height, width, 3)) # need np.float64
             hsv_img = np.zeros_like(previous_frame, dtype=np.float64) # need np.float64
             hsv_img[..., 1] = 1
         for current_frame in rgb_4d:
@@ -90,22 +90,21 @@ class OpticalFlow(object):
                 magnitude, angle = cv.cartToPolar(flow_x / 255, flow_y / 255, angleInDegrees=True)
                 hsv_img[..., 0] = angle # channel 0 represents direction
                 hsv_img[..., 2] = magnitude # channel 2 represents magnitude
-                self.fin_hsv_array[count, :, :, :] = hsv_img[:, :, [0, 2]]
+                self.fin_hsv_array[count, :, :, :] = hsv_img
                 if self.save_img_dir is not None:
-                    hsv_img = hsv_img.astype(np.float32)
-                    cv.imwrite(self.save_img_dir + 'hsv-%d.jpg' % count, cv.cvtColor(hsv_img, cv.COLOR_HSV2RGB))
+                    cv.imwrite(self.save_img_dir + 'hsv-%d.jpg' % count, self.hsv_to_rgb(hsv_img))
                     cv.imwrite(self.save_img_dir + 'rgb-%d.jpg' % count, current_frame)
             previous_frame = current_frame
             count += 1
         cv.destroyAllWindows()
         return flow_4d
 
-    # Scale the input flow to range (0,1) with bi-bound
+    # Scale the input flow to range (0, 255) with bi-bound
     # Input:
     #   raw_flow: input raw pixel value (not in 0-255)
     #   bound: upper and lower bound (-bound, bound)
     # Output:
-    #   pixel value scale from 0 to 1
+    #   pixel value scale from 0 to 255
     def clip_and_scale_flow(self, raw_flow, bound=20):
         flow = raw_flow
         flow[flow > bound] = bound
@@ -207,7 +206,7 @@ class OpticalFlow(object):
     #   pixels above threshold == 1; pixels below threshold == 0
     def optical_flow_threshold(self, flow_threshold, frame, hsv):
         self.thresh_4d[frame,:,:,:] = np.copy(hsv[:, :, :])
-        bin_img = 1.0 * (self.thresh_4d[frame,:,:,1] > flow_threshold)
+        bin_img = 1.0 * (self.thresh_4d[frame,:,:,2] > flow_threshold)
         return bin_img
 
     # Thresholds whether or not rgb pixels are above saturation threshold
@@ -236,7 +235,7 @@ class OpticalFlow(object):
 
         bin_img_shape = np.shape(bin_img)
         acceptable_per_frame.append(np.sum(bin_img[:]) / (bin_img_shape[0] * bin_img_shape[1]))
-        self.thresh_4d[frame, :, :, 1] = bin_img
+        self.thresh_4d[frame, :, :, 2] = bin_img
 
         self.rgb_filtered[frame, :, :, 0] = zeros
         self.rgb_filtered[frame, :, :, 1] = saturation
@@ -254,14 +253,22 @@ class OpticalFlow(object):
     #   rgb - original rgb video
     #   filt - video after saturation filtering and thresholding
     def show_flow(self):
+        plt.figure()
         for i in range(np.shape(self.rgb_4d)[0]):
-            plt.subplot(141), plt.imshow(self.thresh_4d[i,:,:,1]), plt.title('thresh')
-            plt.subplot(142), plt.imshow(self.fin_hsv_array[i,:,:,1].astype(np.uint8)), plt.title('hsv')
+            a = self.fin_hsv_array[i, ...]
+            plt.subplot(141), plt.imshow(self.hsv_to_rgb(self.thresh_4d[i, ...])), plt.title('thresh')
+            plt.subplot(142), plt.imshow(self.hsv_to_rgb(self.fin_hsv_array[i, ...])), plt.title('hsv')
             plt.subplot(143), plt.imshow(self.rgb_4d[i, ...].astype(np.uint8)), plt.title('rgb')
             plt.subplot(144), plt.imshow(self.rgb_filtered[i, ...].astype(np.uint8)), plt.title('filt')
-            plt.figure()
             plt.draw()
-            plt.pause(0.001)
+            plt.pause(0.1)
+        plt.pause(5)
+
+    # Convert hsv to rgb
+    def hsv_to_rgb(self, hsv):
+        rgb = cv.cvtColor(hsv.astype(np.float32), cv.COLOR_HSV2RGB)
+        rgb = (rgb * 255).astype(np.uint8)
+        return rgb
 
     # Check if a directory exists, if not, create it
     def check_and_create_dir(self, path):
