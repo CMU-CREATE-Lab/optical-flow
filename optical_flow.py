@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib
 import ctypes
 from numpy.ctypeslib import ndarray
-#matplotlib.use("TkAgg") # a fix for Mac OS X error
+matplotlib.use("TkAgg") # a fix for Mac OS X error
 from matplotlib import pyplot as plt
 
 class OpticalFlow(object):
@@ -18,10 +18,10 @@ class OpticalFlow(object):
     #       output path of the 4d optical flow array
     #   save_img_dir (str):
     #       directory to save rgb and flow images
-    #   flow_threshold (int):
-    #       pixel threshold for optical flow array (range 0 to 255)
-    #   sat_threshold (int):
-    #       pixel threshold for saturation (range 0 to 255)
+    #   flow_threshold (float):
+    #       pixel threshold for optical flow array (range 0 to 1)
+    #   sat_threshold (float):
+    #       pixel threshold for saturation (range 0 to 1)
     #   frame_threshold (float):
     #       percentage of frame thresholded for acceptable smoke candidacy (range 0 to 1):
     #       e.g. if a frame is thresholdeded and 2% of the pixels are left on (set to 1)
@@ -35,9 +35,12 @@ class OpticalFlow(object):
     #   record_hsv (bool):
     #       convert flow frames to images for detection or not
     #       set this flag to False to increase speed
+    #   clip_flow_bound (int):
+    #       bound to clip the optical flow, see function clip_and_scale_flow()
     def __init__(self, rgb_vid_in_p=None, rgb_4d_out_p=None, flow_4d_out_p=None,
-                 save_img_dir=None, flow_threshold=255, sat_threshold=255,
-                 frame_threshold=1, flow_type=1, desired_frames=1, record_hsv=False):
+                 save_img_dir=None, flow_threshold=1, sat_threshold=1,
+                 frame_threshold=1, flow_type=1, desired_frames=1,
+                 record_hsv=False, clip_flow_bound=20):
         self.rgb_vid_in_p = rgb_vid_in_p
         self.rgb_4d_out_p = rgb_4d_out_p
         self.check_and_create_dir(rgb_4d_out_p)
@@ -51,6 +54,7 @@ class OpticalFlow(object):
         self.flow_type = flow_type
         self.desired_frames = desired_frames
         self.record_hsv = record_hsv
+        self.clip_flow_bound = clip_flow_bound
 
         self.thresh_4d = None
         self.fin_hsv_array = None
@@ -68,14 +72,13 @@ class OpticalFlow(object):
     #   channel 0 and 1 means flow_x and flow_y respectively
     def rgb_to_flow(self, rgb_4d=None):
         length, height, width = rgb_4d.shape[0], rgb_4d.shape[1], rgb_4d.shape[2]
-        rgb_4d = np.uint8(rgb_4d) # in the range of 0 to 255
-        flow_4d = np.zeros((length, height, width, 2)) # need np.float64
+        flow_4d = np.zeros((length, height, width, 2), dtype=np.float32)
         previous_frame = rgb_4d[0, :, :, :]
         previous_gray = cv.cvtColor(previous_frame, cv.COLOR_RGB2GRAY)
         count = 0
         if self.record_hsv or self.save_img_dir is not None:
-            self.fin_hsv_array = np.zeros((length, height, width, 3)) # need np.float64
-            hsv_img = np.zeros_like(previous_frame, dtype=np.float64) # need np.float64
+            self.fin_hsv_array = np.zeros((length, height, width, 3), dtype=np.float32)
+            hsv_img = np.zeros_like(previous_frame, dtype=np.float32)
             hsv_img[..., 1] = 1
         for current_frame in rgb_4d:
             current_gray = cv.cvtColor(current_frame, cv.COLOR_BGR2GRAY)
@@ -114,11 +117,11 @@ class OpticalFlow(object):
     # Scale the input flow to range (0, 255) with bi-bound
     # Input:
     #   raw_flow: input raw pixel value (not in 0-255)
-    #   bound: upper and lower bound (-bound, bound)
     # Output:
     #   pixel value scale from 0 to 255
-    def clip_and_scale_flow(self, raw_flow, bound=20):
+    def clip_and_scale_flow(self, raw_flow):
         flow = raw_flow
+        bound = self.clip_flow_bound
         flow[flow > bound] = bound
         flow[flow < -bound] = -bound
         flow -= -bound
@@ -128,7 +131,6 @@ class OpticalFlow(object):
     # Process an encoded video (h.264 mp4 format) into a 4D array of rgb frames
     # Output:
     #   4D array in rgb format (time, height, width, channel)
-    #   range 0 to 255
     def vid_to_frames(self):
         capture = cv.VideoCapture(self.rgb_vid_in_p)
         ret, previous_frame = capture.read()
@@ -136,7 +138,7 @@ class OpticalFlow(object):
         height = np.size(previous_frame, 0)
         width = np.size(previous_frame, 1)
         length = int(capture.get(cv.CAP_PROP_FRAME_COUNT))
-        rgb_4d = np.zeros((length, height, width, 3))
+        rgb_4d = np.zeros((length, height, width, 3), dtype=np.float32)
 
         if length <= 1:
             return None
@@ -175,14 +177,13 @@ class OpticalFlow(object):
     # Determine whether or not a particular video has significant movement using
     # Optical flow and saturation filtering methods
     # Input:
-    #   flow_threshold (int): pixel threshold for optical flow array (range 0 to 255)
-    #   saturation_threshold (int): pixel threshold for saturation (range 0 to 255)
+    #   flow_threshold (float): pixel threshold for optical flow array (range 0 to 1)
+    #   saturation_threshold (float): pixel threshold for saturation (range 0 to 1)
     #   frame_threshold (float): percentage of frame thresholded for acceptable smoke candidacy (range 0 to 1):
     #   desired_frames (float): percentage of frames to check when thresholding (range 0 to 1)
     # Output:
     #   Boolean (True --> significant smoke movement; False --> no significant smoke movement)
     def threshold(self, flow_threshold, saturation_threshold, frame_threshold, desired_frames):
-        # print("determining video threshold")
         if type(self.fin_hsv_array) != np.ndarray:
             return None
         num_frames = int(np.shape(self.fin_hsv_array)[0]*desired_frames)
@@ -196,7 +197,6 @@ class OpticalFlow(object):
         if desired_frames < 1:
             acceptable_per_frame.sort()
             sub_s = acceptable_per_frame[-num_frames:]
-            print(sub_s)
             for i in sub_s:
                 if i > frame_threshold:
                     print("acceptable")
@@ -210,21 +210,26 @@ class OpticalFlow(object):
 
     # Thresholds whether or not optical flow frame pixels are above threshold
     # Input:
-    #   flow_threshold (int): pixel threshold for optical flow array (range 0 to 255)
-    #   frame (int): frame (index) being considered in optical flow array
-    #   hsv (numpy.array): optical flow video frame to be thresholded
+    #   flow_threshold (float):
+    #       pixel threshold for magnitude in optical flow (range 0 to 1)
+    #       magnitude is the 2 dimension in the hsv format (v channel)
+    #   frame (int):
+    #       frame index being considered in optical flow array
+    #   hsv (numpy.array):
+    #       optical flow video frame to be thresholded
     # Output:
     #   numpy array containing thresholded optical flow
     #   pixels above threshold == 1; pixels below threshold == 0
     def optical_flow_threshold(self, flow_threshold, frame, hsv):
         self.thresh_4d[frame,:,:,:] = np.copy(hsv[:, :, :])
+        print(np.amax(self.thresh_4d[frame,:,:,2]), np.amin(self.thresh_4d[frame,:,:,2]))
         bin_img = 1.0 * (self.thresh_4d[frame,:,:,2] > flow_threshold)
         return bin_img
 
     # Thresholds whether or not rgb pixels are above saturation threshold
     #   NOTE: should usually be called after optical_flow_threshold)
     # Input:
-    #   saturation_threshold (int): pixel threshold for saturation (range 0 to 255)
+    #   saturation_threshold (int): pixel threshold for saturation (range 0 to 1)
     #   acceptable_per_frame (list): list to be filled with percentages of each frame left on
     #       e.g. if a video had three frames and after being thresholded they were determined to
     #       have 30% acceptable movement, 25%, 10%, 18%, and 12%,
@@ -236,7 +241,7 @@ class OpticalFlow(object):
     #   pixels above threshold == 1; pixels below threshold == 0
     def saturation_threshold(self, saturation_threshold, acceptable_per_frame, frame, bin_img):
         rgb = self.rgb_filtered[frame, :, :, :]
-        hsv = np.copy(rgb).astype(np.uint8)
+        hsv = np.copy(rgb).astype(np.float32)
         hsv = cv.cvtColor(hsv, cv.COLOR_RGB2HSV)
         saturation = hsv[:, :, 1]
         saturation = 1.0 * np.where(saturation < saturation_threshold, 0, saturation)
@@ -271,12 +276,12 @@ class OpticalFlow(object):
             plt.subplot(141), plt.imshow(self.hsv_to_rgb(self.thresh_4d[i, ...])), plt.title('thresh')
             plt.subplot(142), plt.imshow(self.hsv_to_rgb(self.fin_hsv_array[i, ...])), plt.title('hsv')
             plt.subplot(143), plt.imshow(self.rgb_4d[i, ...].astype(np.uint8)), plt.title('rgb')
-            plt.subplot(144), plt.imshow(self.rgb_filtered[i, ...].astype(np.uint8)), plt.title('filt')
+            plt.subplot(144), plt.imshow(self.rgb_filtered[i, ...]), plt.title('filt')
             plt.draw()
             plt.pause(0.1)
-        plt.pause(5)
+        plt.pause(1)
 
-    # Convert hsv to rgb
+    # Convert hsv (0<=h<=360, 0<=s<=1, 0<=v<=1) to rgb (range 0 to 255)
     def hsv_to_rgb(self, hsv):
         rgb = cv.cvtColor(hsv.astype(np.float32), cv.COLOR_HSV2RGB)
         rgb = (rgb * 255).astype(np.uint8)
