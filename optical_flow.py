@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib
 import ctypes
 from numpy.ctypeslib import ndarray
-matplotlib.use("TkAgg") # a fix for Mac OS X error
+#matplotlib.use("TkAgg") # a fix for Mac OS X error
 from matplotlib import pyplot as plt
 
 class OpticalFlow(object):
