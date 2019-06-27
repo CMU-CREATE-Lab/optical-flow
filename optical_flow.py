@@ -222,7 +222,6 @@ class OpticalFlow(object):
     #   pixels above threshold == 1; pixels below threshold == 0
     def optical_flow_threshold(self, flow_threshold, frame, hsv):
         self.thresh_4d[frame,:,:,:] = np.copy(hsv[:, :, :])
-        print(np.amax(self.thresh_4d[frame,:,:,2]), np.amin(self.thresh_4d[frame,:,:,2]))
         bin_img = 1.0 * (self.thresh_4d[frame,:,:,2] > flow_threshold)
         return bin_img
 
