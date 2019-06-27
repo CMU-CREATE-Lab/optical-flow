@@ -2,7 +2,7 @@ import os
 import cv2 as cv
 import numpy as np
 import matplotlib
-matplotlib.use("TkAgg") # a fix for Mac OS X error
+#matplotlib.use("TkAgg") # a fix for Mac OS X error
 from matplotlib import pyplot as plt
 
 class OpticalFlow(object):
