@@ -1,9 +1,10 @@
 import os
+import sys
 import cv2 as cv
 import numpy as np
 import matplotlib
 import ctypes
-from numpy.ctypeslib import ndarray
+from numpy.ctypeslib import ndpointer
 #matplotlib.use("TkAgg") # a fix for Mac OS X error
 from matplotlib import pyplot as plt
 
@@ -88,8 +89,7 @@ class OpticalFlow(object):
                 optical_flow = cv.optflow.DualTVL1OpticalFlow_create()
                 flow = optical_flow.calc(previous_gray, current_gray, None)
             elif self.flow_type == 3:
-                optical_flow = ctypes.cdll.LoadLibrary("./CPP_op_flow")
-                flow = np.empty_like(previous_gray)
+                optical_flow = ctypes.cdll.LoadLibrary(os.path.abspath("CUDA_optical_flow"))
                 calc_op_flow = optical_flow.calc_cuda_flow
                 calc_op_flow.restype = None
                 calc_op_flow.argtypes = [ctypes.c_int, # Rows
@@ -97,6 +97,10 @@ class OpticalFlow(object):
                                          ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS"), # Previous gray
                                          ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS"), # Current gray
                                          ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS")] # Array to be filled
+                rows, cols = previous_gray.shape
+                flow = np.zeros((rows, cols, 2), dtype=np.uint8)
+                calc_op_flow(rows, cols, previous_gray, current_gray, flow)
+                flow = flow.astype(np.float32)
             flow_x = self.clip_and_scale_flow(flow[..., 0])
             flow_y = self.clip_and_scale_flow(flow[..., 1])
             flow_4d[count, :, :, 0] = flow_x
