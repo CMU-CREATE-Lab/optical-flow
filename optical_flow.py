@@ -94,13 +94,12 @@ class OpticalFlow(object):
                 calc_op_flow.restype = None
                 calc_op_flow.argtypes = [ctypes.c_int, # Rows
                                          ctypes.c_int, # Cols
-                                         ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS"), # Previous gray
-                                         ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS"), # Current gray
-                                         ndpointer(ctypes.c_uint8, flags="C_CONTIGUOUS")] # Array to be filled
+                                         ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"), # Previous gray
+                                         ndpointer(ctypes.c_float, flags="C_CONTIGUOUS"), # Current gray
+                                         ndpointer(ctypes.c_float, flags="C_CONTIGUOUS")] # Array to be filled
                 rows, cols = previous_gray.shape
-                flow = np.zeros((rows, cols, 2), dtype=np.uint8)
+                flow = np.zeros((rows, cols, 2), dtype=np.float32)
                 calc_op_flow(rows, cols, previous_gray, current_gray, flow)
-                flow = flow.astype(np.float32)
             flow_x = self.clip_and_scale_flow(flow[..., 0])
             flow_y = self.clip_and_scale_flow(flow[..., 1])
             flow_4d[count, :, :, 0] = flow_x
