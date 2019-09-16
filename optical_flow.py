@@ -133,7 +133,7 @@ class OpticalFlow(object):
 
     # Process an encoded video (h.264 mp4 format) into a 4D array of rgb frames
     # Output:
-    #   4D array in rgb format (time, height, width, channel)
+    #   4D numpy array in rgb format (time, height, width, channel)
     def vid_to_frames(self):
         capture = cv.VideoCapture(self.rgb_vid_in_p)
         ret, previous_frame = capture.read()
@@ -153,6 +153,18 @@ class OpticalFlow(object):
         capture.release()
 
         return rgb_4d
+
+    # Process a 4D numpy array into a video and save it
+    # Input:
+    #   rgb_4d: 4D numpy array in rgb format (time, height, width, channel)
+    #   out_path: path to save the video
+    def frames_to_vid(self, rgb_4d, out_path, fps=12, width=180, height=180, fourcc="mp4v"):
+        fourcc = cv.VideoWriter_fourcc(*fourcc)
+        vid = cv.VideoWriter(out_path, fourcc, float(fps), (width, height))
+        rgb_4d = np.uint8(rgb_4d)
+        for i in range(rgb_4d.shape[0]):
+            vid.write(cv.cvtColor(rgb_4d[i, ...], cv.COLOR_RGB2BGR))
+        vid.release()
 
     # Read a video clip and save processed frames to disk (range 0 to 255)
     # Saved:
