@@ -29,6 +29,7 @@ class OpticalFlow(object):
     #       that would be a frame percentage of 0.02
     #   flow_type (int; 1 or 2):
     #       method for computing optical flow (1 = Farneback method, 2 = TVL1 method)
+    #       if flow_type is None, will not process optical flow
     #   desired_frames (float):
     #       percentage of frames to check when thresholding (range 0 to 1)
     #       e.g. if set to .3 checks the 30% of the frames that have the highest
@@ -40,7 +41,7 @@ class OpticalFlow(object):
     #       bound to clip the optical flow, see function clip_and_scale_flow()
     def __init__(self, rgb_vid_in_p=None, rgb_4d_out_p=None, flow_4d_out_p=None,
                  save_img_dir=None, flow_threshold=1, sat_threshold=1,
-                 frame_threshold=1, flow_type=1, desired_frames=1,
+                 frame_threshold=1, flow_type=None, desired_frames=1,
                  record_hsv=False, clip_flow_bound=20):
         self.rgb_vid_in_p = rgb_vid_in_p
         self.rgb_4d_out_p = rgb_4d_out_p
@@ -179,17 +180,21 @@ class OpticalFlow(object):
         rgb_4d = self.vid_to_frames()
         self.rgb_4d = np.copy(rgb_4d)
         self.rgb_filtered = np.copy(rgb_4d)
-        flow_4d = self.rgb_to_flow(rgb_4d)
 
         # Save rgb_4d to path rgb_4d_out_p
         if self.rgb_4d_out_p != None:
             np.save(self.rgb_4d_out_p, np.uint8(rgb_4d))
             print("raw rgb frames saved to %s" % self.rgb_4d_out_p)
 
-        # Save flow_4d to path flow_4d_out_p
-        if self.flow_4d_out_p != None:
-            np.save(self.flow_4d_out_p, np.uint8(flow_4d))
-            print("raw flow frames saved to %s" % self.flow_4d_out_p)
+        # Optical flow
+        if self.flow_type is not None:
+            flow_4d = self.rgb_to_flow(rgb_4d)
+            # Save flow_4d to path flow_4d_out_p
+            if self.flow_4d_out_p != None:
+                np.save(self.flow_4d_out_p, np.uint8(flow_4d))
+                print("raw flow frames saved to %s" % self.flow_4d_out_p)
+
+
 
     # Determine whether or not a particular video has significant movement using
     # Optical flow and saturation filtering methods
