@@ -27,7 +27,7 @@ class OpticalFlow(object):
     #       percentage of frame thresholded for acceptable smoke candidacy (range 0 to 1):
     #       e.g. if a frame is thresholdeded and 2% of the pixels are left on (set to 1)
     #       that would be a frame percentage of 0.02
-    #   flow_type (int; 1 or 2):
+    #   flow_type (int; None, 1, or 2):
     #       method for computing optical flow (1 = Farneback method, 2 = TVL1 method)
     #       if flow_type is None, will not process optical flow
     #   desired_frames (float):
